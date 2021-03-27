@@ -1,0 +1,67 @@
+cd beego-perf
+bee run
+siege -c 100 -r 1000 -b http://127.0.0.1:9191
+{       "transactions":                       100000,
+        "availability":                       100.00,
+        "elapsed_time":                        19.30,
+        "data_transferred":                     2.19,
+        "response_time":                        0.02,
+        "transaction_rate":                  5181.35,
+        "throughput":                           0.11,
+        "concurrency":                         98.46,
+        "successful_transactions":            100000,
+        "failed_transactions":                     0,
+        "longest_transaction":                  0.09,
+        "shortest_transaction":                 0.00
+}
+
+cd gin
+go build -o main main.go
+siege -c 100 -r 1000 -b http://127.0.0.1:9292
+{       "transactions":                       100000,
+        "availability":                       100.00,
+        "elapsed_time":                        18.70,
+        "data_transferred":                     1.72,
+        "response_time":                        0.02,
+        "transaction_rate":                  5347.59,
+        "throughput":                           0.09,
+        "concurrency":                         98.23,
+        "successful_transactions":            100000,
+        "failed_transactions":                     0,
+        "longest_transaction":                  0.36,
+        "shortest_transaction":                 0.00
+}
+
+cd iris
+go run main.go 
+siege -c 100 -r 1000 -b http://127.0.0.1:9393
+{       "transactions":                       100000,
+        "availability":                       100.00,
+        "elapsed_time":                         4.54,
+        "data_transferred":                     2.77,
+        "response_time":                        0.00,
+        "transaction_rate":                 22026.43,
+        "throughput":                           0.61,
+        "concurrency":                         94.49,
+        "successful_transactions":            100000,
+        "failed_transactions":                     0,
+        "longest_transaction":                  0.08,
+        "shortest_transaction":                 0.00
+}
+
+cd echo
+go run main.go 
+siege -c 100 -r 1000 -b http://127.0.0.1:9494
+{       "transactions":                       100000,
+        "availability":                       100.00,
+        "elapsed_time":                         4.44,
+        "data_transferred":                     1.24,
+        "response_time":                        0.00,
+        "transaction_rate":                 22522.52,
+        "throughput":                           0.28,
+        "concurrency":                         94.77,
+        "successful_transactions":            100000,
+        "failed_transactions":                     0,
+        "longest_transaction":                  0.09,
+        "shortest_transaction":                 0.00
+}
