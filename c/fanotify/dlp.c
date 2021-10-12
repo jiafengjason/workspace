@@ -131,13 +131,14 @@ static char *get_program_name_from_pid(int pid, char *buffer, size_t buffer_size
     return buffer;
 }
 
-int getFatherPid(int pid, char *dpath)
+int getDecision(int pid, uint32_t *decision)
 {
     char dir[1024]={0};
     char statPath[1024] = {0};
     char buf[1024] = {0};
+    int rpid=0;
     int fpid=0;
-    char path[1024]={0};
+    char fpath[1024]={0};
     struct stat st;
     ssize_t ret =0;
 
@@ -158,12 +159,37 @@ int getFatherPid(int pid, char *dpath)
 
     fclose(fp);
 
-    sscanf(buf,"%*d %*c%s %*c %d %*s",path,&fpid);
+    sscanf(buf,"%*d %*c%s %*c %d %*s",fpath,&fpid);
 
-    path[strlen(path)-1]='\0';
-    strcpy(dpath,path);
+    fpath[strlen(fpath)-1]='\0';
+    
+    if(strncmp(fpath, "firejail", strlen("firejail"))==0
+       || strncmp(fpath, "encfs", strlen("encfs"))==0
+       || strncmp(fpath, "fuse-overlayfs", strlen("fuse-overlayfs"))==0)
+    {
+        *decision=FAN_ALLOW;
+    }
+    
+    if(strcmp(fpath,"bash")!=0 && strcmp(fpath,"sudo")!=0 ) //bash 终端 sudo 终端
+    {
+        if(fpid==1)
+        {
+            *decision=FAN_DENY;
+            return pid;
+        }
+        else if(fpid==2)
+        {
+            *decision=FAN_DENY;
+            return -1; //内核线程
+        }
+        rpid = getDecision(fpid, decision);
+        if(rpid == 0)
+        {
+            rpid = pid;
+        }
+    }
 
-    return fpid;
+    return rpid;
 }
 
 int main(int argc, char *argv[])
@@ -179,11 +205,8 @@ int main(int argc, char *argv[])
     struct sigaction sa;
     uint32_t response = FAN_ALLOW;
     int pid = 0;
-    int fpid = 0;
-    int gpid = 0;
     char path[PATH_MAX] = {0};
-    char fpath[PATH_MAX] = {0};
-    char gpath[PATH_MAX] = {0};
+    char *workPath = NULL;
 
     sa.sa_flags = SA_SIGINFO | SA_RESTART;
     sigemptyset(&sa.sa_mask);
@@ -196,7 +219,7 @@ int main(int argc, char *argv[])
     opt_sleep = 0;
 
     /* (0) 命令的参数解析 */
-    while ((opt = getopt(argc, argv, "o:s:p:"FANOTIFY_ARGUMENTS)) != -1) {
+    while ((opt = getopt(argc, argv, "o:s:"FANOTIFY_ARGUMENTS)) != -1) {
         switch(opt) {
             case 'o': {
                 char *str, *tok;
@@ -260,11 +283,6 @@ int main(int argc, char *argv[])
                 break;
             case 'p':
                 opt_add_perms = true;
-                if (strcmp(optarg, "deny") == 0)
-                {
-                    printf("FAN_DENY\n");
-                    response = FAN_DENY;
-                }
                 break;
             case 's':
                 opt_sleep = atoi(optarg);
@@ -301,8 +319,11 @@ int main(int argc, char *argv[])
 
     /* (2) 配置fd上需要监控的对象和操作类型 */
     for (; optind < argc; optind++)
+    {
+        workPath = argv[optind];
         if (mark_object(fan_fd, argv[optind], AT_FDCWD, fan_mask, mark_flags) != 0)
             goto fail;
+    }
 
     FD_ZERO(&rfds);
     FD_SET(fan_fd, &rfds);
@@ -317,7 +338,6 @@ int main(int argc, char *argv[])
     /* (3) 通过fd的read()操作来接收监控消息 */
     while ((len = read(fan_fd, buf, sizeof(buf))) > 0) {
         struct fanotify_event_metadata *metadata;
-        char path[PATH_MAX];
         int path_len;
 
         /* (4) 逐个取出监控event消息并处理 */
@@ -349,12 +369,6 @@ int main(int argc, char *argv[])
             /* (4.2) 对一些特殊目录，忽略重复消息 */
             set_special_ignored(fan_fd, metadata->fd, path);
 
-            pid = metadata->pid;
-            fpid = getFatherPid(pid, path);
-            gpid = getFatherPid(fpid, fpath);
-            getFatherPid(gpid, gpath);
-            printf("path=%s pid=%d(%s) fpid=%ld(%s) gpid=%ld(%s)", path, pid, path, fpid, fpath, gpid, gpath);
-
             if (metadata->mask & FAN_ACCESS)
                 printf(" access");
             if (metadata->mask & FAN_OPEN)
@@ -379,16 +393,18 @@ int main(int argc, char *argv[])
                 if (opt_sleep)
                     sleep(opt_sleep);
 
-                if(strncmp(fpath, "firejail", strlen("firejail"))==0
-                   || strncmp(gpath, "firejail", strlen("firejail"))==0
-                   || strncmp(path, "fuse-overlayfs", strlen("fuse-overlayfs"))==0)
-                {
-                    response = FAN_ALLOW;
-                }
-                else
+                pid = metadata->pid;
+                //getDecision(pid, &response);
+                if(strncmp(path, workPath, strlen(workPath)) == 0)
                 {
                     response = FAN_DENY;
                 }
+                else
+                {
+                    response = FAN_ALLOW;
+                }
+                
+                printf("pid=%d(%s) response=%d", pid, path, response);
                 
                 /* (4.3.1) fd的write()操作来发送允许的结果 */
                 if (handle_perm(fan_fd, metadata, response))
