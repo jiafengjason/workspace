@@ -206,7 +206,9 @@ int main(int argc, char *argv[])
     uint32_t response = FAN_ALLOW;
     int pid = 0;
     char path[PATH_MAX] = {0};
-    char *workPath = NULL;
+    char *workPaths[] = {0};
+    int i = 0;
+    int count = 0;
 
     sa.sa_flags = SA_SIGINFO | SA_RESTART;
     sigemptyset(&sa.sa_mask);
@@ -320,9 +322,10 @@ int main(int argc, char *argv[])
     /* (2) 配置fd上需要监控的对象和操作类型 */
     for (; optind < argc; optind++)
     {
-        workPath = argv[optind];
+        workPaths[count] = argv[optind];
         if (mark_object(fan_fd, argv[optind], AT_FDCWD, fan_mask, mark_flags) != 0)
             goto fail;
+        count++;
     }
 
     FD_ZERO(&rfds);
@@ -395,45 +398,55 @@ int main(int argc, char *argv[])
 
                 pid = metadata->pid;
                 //getDecision(pid, &response);
-                if(strncmp(path, workPath, strlen(workPath)) == 0)
+                for(i=0; i<count; i++)
                 {
-                    response = FAN_DENY;
+                    if(strncmp(path, workPaths[i], strlen(workPaths[i])) == 0)
+                    {
+                        response = FAN_DENY;
+                    }
+                    else
+                    {
+                        response = FAN_ALLOW;
+                    }
                 }
-                else
-                {
-                    response = FAN_ALLOW;
-                }
-                
-                printf("pid=%d(%s) response=%d", pid, path, response);
+                printf("pid=%d(%s) response=%d\n", pid, path, response);
                 
                 /* (4.3.1) fd的write()操作来发送允许的结果 */
                 if (handle_perm(fan_fd, metadata, response))
+                {
                     goto fail;
+                }
 
                 /* (4.3.2) 忽略后续的重复消息 */
                 if (metadata->fd >= 0 &&
                     opt_ignore_perm &&
                     set_ignored_mask(fan_fd, metadata->fd,
                              metadata->mask))
+                {
                     goto fail;
+                }
             }
             
             fflush(stdout);
 
             /* (4.4) 关闭消息中的fd，并且取下一个消息 */
             if (metadata->fd >= 0 && close(metadata->fd) != 0)
+            {
                 goto fail;
+            }
             metadata = FAN_EVENT_NEXT(metadata, len);
         }
         while (select(fan_fd+1, &rfds, NULL, NULL, NULL) < 0)
             if (errno != EINTR)
+            {;
                 goto fail;
+            }
     }
     if (len < 0)
         goto fail;
     return 0;
 
 fail:
-    fprintf(stderr, "%s\n", strerror(errno));
+    fprintf(stderr, "fail:%s\n", strerror(errno));
     return 1;
 }
