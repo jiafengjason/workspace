@@ -437,10 +437,12 @@ int main(int argc, char *argv[])
             metadata = FAN_EVENT_NEXT(metadata, len);
         }
         while (select(fan_fd+1, &rfds, NULL, NULL, NULL) < 0)
+        {
             if (errno != EINTR)
-            {;
+            {
                 goto fail;
             }
+        }
     }
     if (len < 0)
         goto fail;
