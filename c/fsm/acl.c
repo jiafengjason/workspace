@@ -159,10 +159,10 @@ static int parse_acl_rule(gated_acl_t *rule, char *buf)
             break;
         case sw_port_start:
             m = p;
-            if (rule->proto != 0) {
-                state = sw_port;
-            } else {
+            if (ch == 'A') {
                 state = sw_port_any;
+            } else {
+                state = sw_port;
             }
             break;
         case sw_port_any:
@@ -184,14 +184,9 @@ static int parse_acl_rule(gated_acl_t *rule, char *buf)
                 state = sw_port_range_start;
                 break;
             } else if (ch == '|') {
-                if(0 == strncmp(m, "ANY", 3)) {
-                    rule->minport = 1;
-                    rule->maxport = 65535;
-                } else {
-                    rule->minport = rule->maxport = atoi(m);
-                    if (rule->minport < 1 || rule->maxport > 65535) {
-                        return -1;
-                    }
+                rule->minport = rule->maxport = atoi(m);
+                if (rule->minport < 1 || rule->maxport > 65535) {
+                    return -1;
                 }
                 state = sw_code_start;
             }
@@ -238,14 +233,9 @@ static int parse_acl_rule(gated_acl_t *rule, char *buf)
             return -1;
         }
     } else if (state == sw_port) {
-        if(0 == strncmp(m, "ANY", 3)) {
-            rule->minport = 1;
-            rule->maxport = 65535;
-        } else {
-            rule->minport = rule->maxport = atoi(m);
-            if (rule->minport < 1 || rule->maxport > 65535) {
-                return -1;
-            }
+        rule->minport = rule->maxport = atoi(m);
+        if (rule->minport < 1 || rule->maxport > 65535) {
+            return -1;
         }
     } else if (state == sw_port_range) {
         rule->maxport = atoi(m);
@@ -258,6 +248,18 @@ static int parse_acl_rule(gated_acl_t *rule, char *buf)
     return 0;
 }
 
+void print_acl(gated_acl_t *prule)
+{
+    char str[128];
+    printf("af_type = %d\n", prule->af_type);
+    printf("proto = %d\n", prule->proto);
+    printf("begin ip = %s\n", inet_ntop(prule->af_type, &prule->ip_start, str, 128));
+    printf("end ip = %s\n", inet_ntop(prule->af_type, &prule->ip_end, str, 128));
+    printf("min port = %d\n", prule->minport);
+    printf("max prot = %d\n", prule->maxport);
+    printf("code = %d\n", prule->code);
+}
+
 int main(void)
 {
     gated_acl_t rule;
@@ -265,5 +267,6 @@ int main(void)
     char aclStr[100] = "IPv4|TCP|100.1.1.0-100.1.1.3|ANY|2";
 
     ret = parse_acl_rule(&rule, aclStr);
-    printf("%d", ret);
+    printf("ret:%d\n", ret);
+    print_acl(&rule);
 }
