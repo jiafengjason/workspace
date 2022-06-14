@@ -40,7 +40,7 @@ ListNode* BuyList(ListDateType x)
 }
 
 //双向链表尾插
-void ListPushBack(ListNode* phead, ListDateType x)
+ListNode* ListPushBack(ListNode* phead, ListDateType x)
 {
     assert(phead);
     ListNode* newnode = BuyList(x);
@@ -50,6 +50,8 @@ void ListPushBack(ListNode* phead, ListDateType x)
     phead->prev = newnode;
     newnode->next = phead;
     newnode->prev = tail;
+    
+    return newnode;
 }
 
 //双向链表尾删
@@ -65,7 +67,7 @@ void ListPopBack(ListNode* phead)
 }
 
 //双向链表头插
-void ListPushFront(ListNode* phead, ListDateType x)
+ListNode* ListPushFront(ListNode* phead, ListDateType x)
 {
     assert(phead);
     ListNode* newnode = BuyList(x);
@@ -75,6 +77,8 @@ void ListPushFront(ListNode* phead, ListDateType x)
     head->prev = newnode;
     newnode->next = head;
     newnode->prev = phead;
+    
+    return newnode;
 }
 
 //双向链表头删
@@ -110,7 +114,7 @@ ListNode* ListFind(ListNode* phead, ListDateType x)
 }
 
 //在pos之前插入
-void ListInsert(ListNode* pos, ListDateType x)
+ListNode* ListInsert(ListNode* pos, ListDateType x)
 {
     assert(pos);
     ListNode* newnode = BuyList(x);
@@ -120,6 +124,8 @@ void ListInsert(ListNode* pos, ListDateType x)
     pos->prev = newnode;
     newnode->prev = prev;
     newnode->next = pos;
+    
+    return newnode;
 }
 
 //删除pos位置
