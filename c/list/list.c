@@ -36,6 +36,7 @@ ListNode* BuyList(ListDateType x)
     newnode->val = x;
     newnode->next = NULL;
     newnode->prev = NULL;
+    return newnode;
 }
 
 //双向链表尾插
