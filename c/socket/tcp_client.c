@@ -7,7 +7,9 @@
 #include <string.h>
 #include <netdb.h>
 #include <netinet/in.h>
-#define SERVPORT 3333
+#include <fcntl.h>
+
+#define SERVPORT 10911
 #define MAXDATASIZE 100
 
 int main(int argc,char *argv[]) {
@@ -26,7 +28,7 @@ int main(int argc,char *argv[]) {
         exit(1);
     }
 
-    if((sockfd = socket(AF_INET,SOCK_STREAM,0)) == -1) {//创建socket
+    if((sockfd = socket(AF_INET,SOCK_STREAM,IPPROTO_TCP)) == -1) {//创建socket
         perror("socket");
         exit(1);
     }
@@ -37,6 +39,7 @@ int main(int argc,char *argv[]) {
     serv_addr.sin_addr = *((struct in_addr *)host->h_addr);
     bzero(&(serv_addr.sin_zero),8);
 
+    fcntl(sockfd, F_SETFL, fcntl(sockfd, F_GETFL) | O_NONBLOCK);
     if((connect(sockfd,(struct sockaddr *)&serv_addr,sizeof(struct sockaddr))) == -1) {//发起对服务器的链接
         perror("connect");
         exit(1);
