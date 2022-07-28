@@ -3,6 +3,7 @@ package main
 import (
     "fmt"
     "log"
+    "os"
     "strings"
     "crypto/tls"
     "time"
@@ -30,6 +31,7 @@ type (
 var (
     Method          string
     Server          string
+    LogFilePath     string
     Timeout         int
     TcpConn         net.Conn
     TlsConn         *tls.Conn
@@ -118,9 +120,8 @@ func iptablesNewChain(tableName, chainName, subChainName string) error {
     return nil
 }
 
-func init() {
+func initIpset() {
     var err error
-    log.Println("Init")
     if err = ipset.Check(); err != nil {
         log.Println("ipset.Check err:", err)
     }
@@ -244,10 +245,10 @@ func tcpProcess() {
         c.SetReadDeadline(time.Now().Add(time.Duration(Timeout) * time.Second))
         n, err = c.Read(buf)
         if err != nil {
-            log.Printf("conn read %d bytes,  error: %s", n, err)
             if nerr, ok := err.(net.Error); ok && nerr.Timeout() {
                 continue
             }
+            log.Printf("conn read %d bytes,  error: %s", n, err)
             return
         }
 
@@ -283,10 +284,10 @@ func tlsProcess() {
         c.SetReadDeadline(time.Now().Add(time.Duration(Timeout) * time.Second))
         n, err = c.Read(buf)
         if err != nil {
-            log.Printf("conn read %d bytes,  error: %s", n, err)
             if nerr, ok := err.(net.Error); ok && nerr.Timeout() {
                 continue
             }
+            log.Printf("conn read %d bytes,  error: %s", n, err)
             return
         }
 
@@ -298,18 +299,29 @@ func tlsProcess() {
     }
 
     c.Close()
-    //clearIpset()
 }
 
 func main() {
     flag.StringVar(&Method, "m", "tcp", "tcp/tls")
     flag.StringVar(&Server, "s", "192.168.100.102:10911", "host:port")
     flag.IntVar(&Timeout, "t", 5, "Timeout seconds")
+    flag.StringVar(&LogFilePath, "l", "./abac.log", "log file path")
     flag.Parse()
+
+    logFile, err := os.OpenFile(LogFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+    if err != nil {
+        fmt.Println("open log file failed, err:", err)
+        return
+    }
+    log.SetOutput(logFile)
+
+    initIpset()
 
     if Method == "tls" {
         tlsProcess()
     } else {
         tcpProcess()
     }
+
+    //clearIpset()
 }
