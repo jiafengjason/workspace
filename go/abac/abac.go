@@ -29,17 +29,19 @@ type (
 )
 
 var (
-    Method          string
-    Server          string
-    LogFilePath     string
-    Timeout         int
-    TcpConn         net.Conn
-    TlsConn         *tls.Conn
-    BlackSip        ipset.IPSet
-    BlackDip        ipset.IPSet
-    BlackSipDip     ipset.IPSet
-    IptClient       *iptables.IPTables
-    Lock            sync.Mutex
+    Method              string
+    Server              string
+    LogFilePath         string
+    Timeout             int
+    TcpConn             net.Conn
+    TlsConn             *tls.Conn
+    BlackSip            ipset.IPSet
+    BlackDip            ipset.IPSet
+    BlackSipDip         ipset.IPSet
+    BlackDipDport       ipset.IPSet
+    BlackSipDportDip    ipset.IPSet
+    IptClient           *iptables.IPTables
+    Lock                sync.Mutex
 )
 
 func iptablesNew() {
@@ -138,16 +140,28 @@ func initIpset() {
     if err!=nil {
         log.Println("ipset.New err:", err)
     }
+    BlackDipDport, err = ipset.New("black_dip_dport", ipset.HashIpPort, ipset.Exist(true), ipset.Timeout(0))
+    if err!=nil {
+        log.Println("ipset.New err:", err)
+    }
+    BlackSipDportDip, err = ipset.New("black_sip_dport_dip", ipset.HashIpPortIp, ipset.Exist(true), ipset.Timeout(0))
+    if err!=nil {
+        log.Println("ipset.New err:", err)
+    }
     iptablesNewChain("filter", "FORWARD", "ABAC")
     iptablesAppendUnique("filter", "ABAC", "-m", "set", "--match-set", "black_sip", "src", "-j", "DROP")
     iptablesAppendUnique("filter", "ABAC", "-m", "set", "--match-set", "black_dip", "dst", "-j", "DROP")
     iptablesAppendUnique("filter", "ABAC", "-m", "set", "--match-set", "black_sip_dip", "src,dst", "-j", "DROP")
+    iptablesAppendUnique("filter", "ABAC", "-m", "set", "--match-set", "black_dip_dport", "dst,dst", "-j", "DROP")
+    iptablesAppendUnique("filter", "ABAC", "-m", "set", "--match-set", "black_sip_dport_dip", "src,dst,dst", "-j", "DROP")
 }
 
 func clearIpset() {
     iptablesDelete("filter", "ABAC", "-m", "set", "--match-set", "black_sip", "src", "-j", "DROP")
     iptablesDelete("filter", "ABAC", "-m", "set", "--match-set", "black_dip", "dst", "-j", "DROP")
     iptablesDelete("filter", "ABAC", "-m", "set", "--match-set", "black_sip_dip", "src,dst", "-j", "DROP")
+    iptablesDelete("filter", "ABAC", "-m", "set", "--match-set", "black_dip_dport", "dst,dst", "-j", "DROP")
+    iptablesDelete("filter", "ABAC", "-m", "set", "--match-set", "black_sip_dport_dip", "src,dst,dst", "-j", "DROP")
     err := BlackSip.Destroy()
     if err != nil {
         log.Println("err :", err)
@@ -160,6 +174,14 @@ func clearIpset() {
     if err != nil {
         log.Println("err :", err)
     }
+    err = BlackDipDport.Destroy()
+    if err != nil {
+        log.Println("err :", err)
+    }
+    err = BlackSipDportDip.Destroy()
+    if err != nil {
+        log.Println("err :", err)
+    }
 }
 
 func ipsetUpdateEntry(set ipset.IPSet, entry string, cfg *AbacCfg) {
@@ -167,13 +189,13 @@ func ipsetUpdateEntry(set ipset.IPSet, entry string, cfg *AbacCfg) {
         if cfg.Timeout==0 {
             ok, _ := set.Test(entry)
             if !ok {
-                log.Println("Add")
+                log.Println("Add", entry)
                 set.Add(entry)
             }
         } else {
             ok, _ := set.Test(entry)
             if !ok {
-                log.Println("Add", cfg.Timeout)
+                log.Println("Add", entry, "timeout", cfg.Timeout)
                 err := set.Add(entry, ipset.Timeout(time.Duration(cfg.Timeout)*time.Minute))
                 if err != nil {
                     log.Println("err :", err)
@@ -184,6 +206,7 @@ func ipsetUpdateEntry(set ipset.IPSet, entry string, cfg *AbacCfg) {
     } else {
         ok, _ := set.Test(entry)
         if ok {
+            log.Println("Del", entry)
             set.Del(entry)
         }
     }
@@ -199,6 +222,10 @@ func abacProcess(cfg *AbacCfg) {
         ipsetUpdateEntry(BlackDip, cfg.Dip, cfg)
     case 3:
         ipsetUpdateEntry(BlackSipDip, cfg.Sip+","+cfg.Dip, cfg)
+    case 4:
+        ipsetUpdateEntry(BlackDipDport, cfg.Dip+","+cfg.Dport, cfg)
+    case 5:
+        ipsetUpdateEntry(BlackSipDportDip, cfg.Sip+","+cfg.Dport+","+cfg.Dip, cfg)
     }
 }
 
