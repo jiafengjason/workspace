@@ -186,34 +186,26 @@ func clearIpset() {
 
 func ipsetUpdateEntry(set ipset.IPSet, entry string, cfg *AbacCfg) {
     if cfg.Isdelete == 0 {
-        if cfg.Timeout==0 {
-            ok, _ := set.Test(entry)
-            if !ok {
-                log.Println("Add", entry)
-                set.Add(entry)
-            }
-        } else {
-            ok, _ := set.Test(entry)
-            if !ok {
-                log.Println("Add", entry, "timeout", cfg.Timeout)
-                err := set.Add(entry, ipset.Timeout(time.Duration(cfg.Timeout)*time.Minute))
-                if err != nil {
-                    log.Println("err :", err)
-                    return
-                }
-            }
+        log.Println(set.Name(), ": add", entry, "timeout", cfg.Timeout)
+        err := set.Add(entry, ipset.Exist(true), ipset.Timeout(time.Duration(cfg.Timeout)*time.Minute))
+        if err != nil {
+            log.Println("err :", err)
+            return
         }
     } else {
         ok, _ := set.Test(entry)
         if ok {
-            log.Println("Del", entry)
-            set.Del(entry)
+            log.Println(set.Name(), ": del", entry)
+            err := set.Del(entry)
+            if err != nil {
+                log.Println("Del err :", err)
+                return
+            }
         }
     }
 }
 
 func abacProcess(cfg *AbacCfg) {
-    log.Println("abacProcess")
     switch cfg.Type {
     case 0:
     case 1:
@@ -300,6 +292,7 @@ func tlsProcess() {
     c, err := tls.Dial("tcp", Server, conf)
     if err != nil {
         log.Println("err :", err)
+        time.Sleep(10 * time.Second)
         return
     }
 
@@ -314,6 +307,7 @@ func tlsProcess() {
             if nerr, ok := err.(net.Error); ok && nerr.Timeout() {
                 continue
             }
+            time.Sleep(10 * time.Second)
             log.Printf("conn read %d bytes,  error: %s", n, err)
             return
         }
@@ -329,7 +323,7 @@ func tlsProcess() {
 }
 
 func main() {
-    flag.StringVar(&Method, "m", "tcp", "tcp/tls")
+    flag.StringVar(&Method, "m", "tls", "tcp/tls")
     flag.StringVar(&Server, "s", "192.168.100.102:10911", "host:port")
     flag.IntVar(&Timeout, "t", 5, "Timeout seconds")
     flag.StringVar(&LogFilePath, "l", "./abac.log", "log file path")
@@ -344,10 +338,12 @@ func main() {
 
     initIpset()
 
-    if Method == "tls" {
-        tlsProcess()
-    } else {
-        tcpProcess()
+    for {
+        if Method == "tls" {
+            tlsProcess()
+        } else {
+            tcpProcess()
+        }
     }
 
     //clearIpset()
