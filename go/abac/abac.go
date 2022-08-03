@@ -128,23 +128,23 @@ func initIpset() {
         log.Println("ipset.Check err:", err)
     }
 
-    BlackSip, err = ipset.New("black_sip", ipset.HashIp, ipset.Exist(true), ipset.Timeout(0))
+    BlackSip, err = ipset.New("black_sip", ipset.HashIp, ipset.Exist(true), ipset.Counters(true), ipset.Timeout(0))
     if err!=nil {
         log.Println("ipset.New err:", err)
     }
-    BlackDip, err = ipset.New("black_dip", ipset.HashIp, ipset.Exist(true), ipset.Timeout(0))
+    BlackDip, err = ipset.New("black_dip", ipset.HashIp, ipset.Exist(true), ipset.Counters(true), ipset.Timeout(0))
     if err!=nil {
         log.Println("ipset.New err:", err)
     }
-    BlackSipDip, err = ipset.New("black_sip_dip", ipset.HashNetNet, ipset.Exist(true), ipset.Timeout(0))
+    BlackSipDip, err = ipset.New("black_sip_dip", ipset.HashNetNet, ipset.Exist(true), ipset.Counters(true), ipset.Timeout(0))
     if err!=nil {
         log.Println("ipset.New err:", err)
     }
-    BlackDipDport, err = ipset.New("black_dip_dport", ipset.HashIpPort, ipset.Exist(true), ipset.Timeout(0))
+    BlackDipDport, err = ipset.New("black_dip_dport", ipset.HashIpPort, ipset.Exist(true), ipset.Counters(true), ipset.Timeout(0))
     if err!=nil {
         log.Println("ipset.New err:", err)
     }
-    BlackSipDportDip, err = ipset.New("black_sip_dport_dip", ipset.HashIpPortIp, ipset.Exist(true), ipset.Timeout(0))
+    BlackSipDportDip, err = ipset.New("black_sip_dport_dip", ipset.HashIpPortIp, ipset.Exist(true), ipset.Counters(true), ipset.Timeout(0))
     if err!=nil {
         log.Println("ipset.New err:", err)
     }
