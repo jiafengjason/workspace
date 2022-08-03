@@ -248,11 +248,14 @@ func tcpProcess() {
     c, err := net.Dial("tcp", Server)
     if err != nil {
         log.Println("err :", err)
+        time.Sleep(10 * time.Second)
         return
     }
 
+    _, err = c.Write([]byte(`{ "type": "nta" }\n`))
     if err != nil {
-        log.Println("err :", err)
+        log.Printf("Write  error: %s", err)
+        time.Sleep(10 * time.Second)
         return
     }
 
@@ -268,6 +271,7 @@ func tcpProcess() {
                 continue
             }
             log.Printf("conn read %d bytes,  error: %s", n, err)
+            time.Sleep(10 * time.Second)
             return
         }
 
@@ -292,6 +296,13 @@ func tlsProcess() {
     c, err := tls.Dial("tcp", Server, conf)
     if err != nil {
         log.Println("err :", err)
+        time.Sleep(10 * time.Second)
+        return
+    }
+
+    _, err = c.Write([]byte(`{ "type": "nta" }\n`))
+    if err != nil {
+        log.Printf("Write  error: %s", err)
         time.Sleep(10 * time.Second)
         return
     }
