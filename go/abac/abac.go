@@ -245,19 +245,25 @@ func tcpProcess() {
     var err error
     var buf = make([]byte, 1000)
 
-    c, err := net.Dial("tcp", Server)
+    c, err := net.DialTimeout("tcp", Server, time.Duration(Timeout) * time.Second)
     if err != nil {
         log.Println("err :", err)
         time.Sleep(10 * time.Second)
         return
     }
 
-    _, err = c.Write([]byte(`{ "type": "nta" }\n`))
+    hostname, _ := os.Hostname()
+    info := fmt.Sprintf("{ \"hostname\": \"%s\" }\n", hostname)
+    log.Println(info)
+    c.SetReadDeadline(time.Now().Add(time.Duration(Timeout) * time.Second))
+    c.SetWriteDeadline(time.Now().Add(time.Duration(Timeout) * time.Second))
+    n, err = c.Write([]byte(info))
     if err != nil {
         log.Printf("Write  error: %s", err)
         time.Sleep(10 * time.Second)
         return
     }
+    log.Printf("Write %d bytes", n)
 
     for {
         for i:=0;i<len(buf);i++{
@@ -300,12 +306,18 @@ func tlsProcess() {
         return
     }
 
-    _, err = c.Write([]byte(`{ "type": "nta" }\n`))
+    hostname, _ := os.Hostname()
+    info := fmt.Sprintf("{ \"hostname\": \"%s\" }\n", hostname)
+    log.Println(info)
+    c.SetReadDeadline(time.Now().Add(time.Duration(Timeout) * time.Second))
+    c.SetWriteDeadline(time.Now().Add(time.Duration(Timeout) * time.Second))
+    n, err = c.Write([]byte(info))
     if err != nil {
         log.Printf("Write  error: %s", err)
         time.Sleep(10 * time.Second)
         return
     }
+    log.Printf("Write %d bytes", n)
 
     for {
         for i:=0;i<len(buf);i++{
@@ -319,7 +331,7 @@ func tlsProcess() {
                 continue
             }
             time.Sleep(10 * time.Second)
-            log.Printf("conn read %d bytes,  error: %s", n, err)
+            log.Printf("Read %d bytes,  error: %s", n, err)
             return
         }
 
