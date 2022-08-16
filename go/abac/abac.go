@@ -1,18 +1,6 @@
 package main
 
-/*
-#cgo CFLAGS: -I include
-#cgo LDFLAGS: -L lib -Wl,-rpath=lib -lclient -lfko -lnetfilter_queue
-#include "fko.h"
-#include "client.h"
-#include "netfilter.h"
-#include <string.h>
-#include <stdlib.h>
-*/
-import "C"
 import (
-    "encoding/hex"
-    "errors"
     "fmt"
     "log"
     "os"
@@ -26,7 +14,6 @@ import (
     "encoding/json"
     "abac/ipset"
     "abac/iptables"
-    "unsafe"
 )
 
 type (
@@ -43,11 +30,12 @@ type (
 )
 
 var (
-    udpToken string = "ffcbbd5d0ff16b8d161b80a8be26b918"
     Method              string
     Server              string
     LogFilePath         string
+    SpaMethod           string
     SpaPort             int
+    SpaRefreshTime      int
     Timeout             int
     TcpConn             net.Conn
     TlsConn             *tls.Conn
@@ -59,58 +47,6 @@ var (
     IptClient           *iptables.IPTables
     Lock                sync.Mutex
 )
-
-func udp_spa(ip net.IP, DstPort int, spaPort int) (error) {
-    //udp 敲门
-    var ctx C.fko_ctx_t
-    var spa_data *C.char
-    res := C.fko_new(&ctx)
-    if res != C.FKO_SUCCESS {
-        C.fko_destroy(ctx)
-        return errors.New("[spa] fko ctx new failed")
-    }
-    res = C.fko_set_spa_message_type(ctx, C.FKO_ACCESS_MSG)
-    if res != C.FKO_SUCCESS {
-        C.fko_destroy(ctx)
-        return errors.New("[spa] fko ctx set message type failed")
-    }
-
-    info := ip.String() + ",tcp/" + strconv.Itoa(DstPort)
-    cinfo := C.CString(info)
-    defer C.free(unsafe.Pointer(cinfo))
-
-    res = C.fko_set_spa_message(ctx, cinfo)
-    if res != C.FKO_SUCCESS {
-        C.fko_destroy(ctx)
-        return errors.New("[spa] fko ctx set message failed")
-    }
-    udpspaKey, _ := hex.DecodeString(udpToken)
-    res = C.fko_enlink_spa_data_final(ctx, (*C.uchar)(unsafe.Pointer(&udpspaKey[0])), C.FKO_HMAC_MD5)
-    if res != C.FKO_SUCCESS {
-        C.fko_destroy(ctx)
-        return errors.New("[spa] fko ctx set enlink spa data final failed")
-    }
-    res = C.fko_get_spa_data(ctx, &spa_data)
-    if res != C.FKO_SUCCESS {
-
-        C.fko_destroy(ctx)
-        return errors.New("[spa] fko ctx get spa data failed")
-    }
-    size := C.strlen(spa_data)
-    data := C.GoBytes(unsafe.Pointer(spa_data), (C.int(size)))
-    C.fko_destroy(ctx)
-
-    //udp发送udp spa data
-    rAddr := &net.UDPAddr{IP: ip, Port: spaPort}
-    lAddr := &net.UDPAddr{IP: net.IPv4zero, Port: 0}
-    conn, err := net.DialUDP("udp", lAddr, rAddr)
-    if err != nil {
-        return errors.New("[spa] udp send spa packet failed")
-    }
-    conn.Write(data)
-    conn.Close()
-    return  nil
-}
 
 func iptablesNew() {
     log.Println("IptablesNew")
@@ -185,6 +121,22 @@ func iptablesNewChain(tableName, chainName, subChainName string) error {
     err = iptablesAppendUnique(tableName, chainName, "-j", subChainName)
     if err != nil {
         log.Println("Iptables AppendUnique failed:", err)
+    }
+
+    return nil
+}
+
+func iptablesClearChain(tableName, chainName string) error {
+
+    if IptClient == nil {
+        iptablesNew()
+    }
+
+    log.Println("IptablesClearChain", tableName, chainName)
+    err := IptClient.ClearChain(tableName, chainName)
+    if err != nil {
+        log.Println("Iptables ClearChain failed:", err)
+        return err
     }
 
     return nil
@@ -416,7 +368,9 @@ func tlsProcess() {
 func main() {
     flag.StringVar(&Method, "m", "tls", "tcp/tls")
     flag.StringVar(&Server, "s", "36.152.113.234:10913", "host:port")
+    flag.StringVar(&SpaMethod, "e", "udp", "Spa method")
     flag.IntVar(&SpaPort, "p", 62201, "Spa port")
+    flag.IntVar(&SpaRefreshTime, "r", 15, "Spa refresh time")
     flag.IntVar(&Timeout, "t", 5, "Timeout seconds")
     flag.StringVar(&LogFilePath, "l", "./abac.log", "log file path")
     flag.Parse()
@@ -428,17 +382,18 @@ func main() {
     }
     log.SetOutput(logFile)
 
+    slices := strings.Split(Server, ":")
+    if len(slices) == 1 {
+        log.Println("Invalid server:", Server)
+        return
+    }
+    ip := slices[0]
+    port, _ := strconv.Atoi(slices[1])
+    spaInit(ip)
     initIpset()
 
     for {
-        slices := strings.Split(Server, ":")
-        if len(slices) == 1 {
-            log.Println("Invalid server:", Server)
-            break
-        }
-        ip := net.ParseIP(slices[0])
-        port, _ := strconv.Atoi(slices[1])
-        udp_spa(ip, port, SpaPort)
+        udpSpa(net.ParseIP(ip), port, SpaPort)
         if Method == "tls" {
             tlsProcess()
         } else {
