@@ -369,7 +369,7 @@ func main() {
     flag.StringVar(&Method, "m", "tls", "tcp/tls")
     flag.StringVar(&Server, "s", "36.152.113.234:10913", "host:port")
     flag.StringVar(&SpaMethod, "e", "udp", "Spa method")
-    flag.IntVar(&SpaPort, "p", 62201, "Spa port")
+    flag.IntVar(&SpaPort, "p", 62212, "Spa port")
     flag.IntVar(&SpaRefreshTime, "r", 15, "Spa refresh time")
     flag.IntVar(&Timeout, "t", 5, "Timeout seconds")
     flag.StringVar(&LogFilePath, "l", "./abac.log", "log file path")
