@@ -116,7 +116,8 @@ func udpSpa(ip net.IP, DstPort int, spaPort int) (error) {
 }
 
 func tcpSpa()  {
-	nfq, err := newNFQueue(0, 100, NF_DEFAULT_PACKET_SIZE)
+	id,_ := strconv.Atoi(QueueId)
+	nfq, err := newNFQueue(uint16(id), 100, NF_DEFAULT_PACKET_SIZE)
 	if err != nil {
 		log.Println("init netfilter nfque failed", err)
 		return
@@ -181,9 +182,9 @@ func spaInit(ip string)  {
 	if SpaMethod == "udp" {
 		return
 	}
-	iptablesNewChain("filter","OUTPUT","tcp_spa")
-	iptablesClearChain("filter", "tcp_spa")
-	iptablesAppendUnique("filter", "tcp_spa", "-p", "tcp", "--syn", "-m", "state", "--state", "NEW", "!", "-s", ip, "-d", ip, "-j", "NFQUEUE", "--queue-num", "0")
+	iptablesNewChain("filter","OUTPUT","ABAC_OUTPUT")
+	iptablesClearChain("filter", "ABAC_OUTPUT")
+	iptablesAppendUnique("filter", "ABAC_OUTPUT", "-p", "tcp", "--syn", "-m", "state", "--state", "NEW", "!", "-s", ip, "-d", ip, "-j", "NFQUEUE", "--queue-num", QueueId)
 	go tcpSpa()
 }
 

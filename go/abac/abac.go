@@ -36,6 +36,7 @@ var (
     SpaMethod           string
     SpaPort             int
     SpaRefreshTime      int
+    QueueId             string
     Timeout             int
     TcpConn             net.Conn
     TlsConn             *tls.Conn
@@ -168,20 +169,20 @@ func initIpset() {
     if err!=nil {
         log.Println("ipset.New err:", err)
     }
-    iptablesNewChain("filter", "FORWARD", "ABAC")
-    iptablesAppendUnique("filter", "ABAC", "-m", "set", "--match-set", "black_sip", "src", "-j", "DROP")
-    iptablesAppendUnique("filter", "ABAC", "-m", "set", "--match-set", "black_dip", "dst", "-j", "DROP")
-    iptablesAppendUnique("filter", "ABAC", "-m", "set", "--match-set", "black_sip_dip", "src,dst", "-j", "DROP")
-    iptablesAppendUnique("filter", "ABAC", "-m", "set", "--match-set", "black_dip_dport", "dst,dst", "-j", "DROP")
-    iptablesAppendUnique("filter", "ABAC", "-m", "set", "--match-set", "black_sip_dport_dip", "src,dst,dst", "-j", "DROP")
+    iptablesNewChain("filter", "FORWARD", "ABAC_FORWARD")
+    iptablesAppendUnique("filter", "ABAC_FORWARD", "-m", "set", "--match-set", "black_sip", "src", "-j", "DROP")
+    iptablesAppendUnique("filter", "ABAC_FORWARD", "-m", "set", "--match-set", "black_dip", "dst", "-j", "DROP")
+    iptablesAppendUnique("filter", "ABAC_FORWARD", "-m", "set", "--match-set", "black_sip_dip", "src,dst", "-j", "DROP")
+    iptablesAppendUnique("filter", "ABAC_FORWARD", "-m", "set", "--match-set", "black_dip_dport", "dst,dst", "-j", "DROP")
+    iptablesAppendUnique("filter", "ABAC_FORWARD", "-m", "set", "--match-set", "black_sip_dport_dip", "src,dst,dst", "-j", "DROP")
 }
 
 func clearIpset() {
-    iptablesDelete("filter", "ABAC", "-m", "set", "--match-set", "black_sip", "src", "-j", "DROP")
-    iptablesDelete("filter", "ABAC", "-m", "set", "--match-set", "black_dip", "dst", "-j", "DROP")
-    iptablesDelete("filter", "ABAC", "-m", "set", "--match-set", "black_sip_dip", "src,dst", "-j", "DROP")
-    iptablesDelete("filter", "ABAC", "-m", "set", "--match-set", "black_dip_dport", "dst,dst", "-j", "DROP")
-    iptablesDelete("filter", "ABAC", "-m", "set", "--match-set", "black_sip_dport_dip", "src,dst,dst", "-j", "DROP")
+    iptablesDelete("filter", "ABAC_FORWARD", "-m", "set", "--match-set", "black_sip", "src", "-j", "DROP")
+    iptablesDelete("filter", "ABAC_FORWARD", "-m", "set", "--match-set", "black_dip", "dst", "-j", "DROP")
+    iptablesDelete("filter", "ABAC_FORWARD", "-m", "set", "--match-set", "black_sip_dip", "src,dst", "-j", "DROP")
+    iptablesDelete("filter", "ABAC_FORWARD", "-m", "set", "--match-set", "black_dip_dport", "dst,dst", "-j", "DROP")
+    iptablesDelete("filter", "ABAC_FORWARD", "-m", "set", "--match-set", "black_sip_dport_dip", "src,dst,dst", "-j", "DROP")
     err := BlackSip.Destroy()
     if err != nil {
         log.Println("err :", err)
@@ -371,6 +372,7 @@ func main() {
     flag.StringVar(&SpaMethod, "e", "udp", "Spa method")
     flag.IntVar(&SpaPort, "p", 62212, "Spa port")
     flag.IntVar(&SpaRefreshTime, "r", 15, "Spa refresh time")
+    flag.StringVar(&QueueId, "q", "100", "TCP spa queue id")
     flag.IntVar(&Timeout, "t", 5, "Timeout seconds")
     flag.StringVar(&LogFilePath, "l", "./abac.log", "log file path")
     flag.Parse()
