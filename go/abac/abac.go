@@ -4,9 +4,11 @@ import (
     "fmt"
     "log"
     "os"
+    "os/signal"
     "strconv"
     "strings"
     "crypto/tls"
+    "syscall"
     "time"
     "net"
     "flag"
@@ -366,6 +368,28 @@ func tlsProcess() {
     c.Close()
 }
 
+func signalHandle() {
+    ch := make(chan os.Signal)
+    signal.Notify(ch)
+    for {
+        sig := <-ch
+        switch sig {
+        case syscall.SIGINT:
+            log.Println("SIGINT")
+        case syscall.SIGTERM:
+            log.Println("SIGTERM")
+        case syscall.SIGQUIT:
+            log.Println("SIGQUIT")
+        case syscall.SIGHUP:
+            log.Println("SIGHUP")
+        case syscall.SIGKILL:
+            log.Println("SIGKILL")
+        default:
+            log.Println(fmt.Sprintf("Unknown Signal received: %v", sig))
+        }
+    }
+}
+
 func main() {
     flag.StringVar(&Method, "m", "tls", "tcp/tls")
     flag.StringVar(&Server, "s", "36.152.113.234:10913", "host:port")
@@ -376,6 +400,8 @@ func main() {
     flag.IntVar(&Timeout, "t", 5, "Timeout seconds")
     flag.StringVar(&LogFilePath, "l", "./abac.log", "log file path")
     flag.Parse()
+
+    go signalHandle()
 
     logFile, err := os.OpenFile(LogFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
     if err != nil {
