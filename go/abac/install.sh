@@ -1,8 +1,10 @@
 #!/bin/bash
 
+CURRENT=`pwd`
+
 service abac stop
 
-cp -rf abac.service /etc/systemd/system
+cp -rf ${CURRENT}/etc/* /etc
 systemctl daemon-reload
 systemctl enable abac
 
