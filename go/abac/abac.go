@@ -398,7 +398,7 @@ func main() {
     flag.IntVar(&SpaRefreshTime, "r", 15, "Spa refresh time")
     flag.StringVar(&QueueId, "q", "100", "TCP spa queue id")
     flag.IntVar(&Timeout, "t", 5, "Timeout seconds")
-    flag.StringVar(&LogFilePath, "l", "./abac.log", "log file path")
+    flag.StringVar(&LogFilePath, "l", "/var/log/abac.log", "log file path")
     flag.Parse()
 
     go signalHandle()

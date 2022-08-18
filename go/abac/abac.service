@@ -1,0 +1,13 @@
+[Unit]
+Description=abac
+ConditionFileIsExecutable=/root/abac/abac
+
+[Service]
+Restart=always
+RestartSec=5
+StartLimitInterval=0
+StartLimitBurst=5
+ExecStart=/root/abac/abac
+
+[Install]
+WantedBy=multi-user.target
