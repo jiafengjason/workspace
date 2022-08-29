@@ -1,3 +1,4 @@
+//apt-get install libx11-dev
 //gcc -o pid pid.c `pkg-config glib-2.0 --libs --cflags` -lX11 -Wall
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
@@ -44,7 +45,6 @@ int main(int argc, char **argv)
                                     &ret_prop) != Success)       // 后五个参数是返回值
         {
                  printf("Cannot get %s property.\n", "_NET_WM_PID");
-                 return NULL;
         }
         else
         {
