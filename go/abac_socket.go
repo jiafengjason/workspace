@@ -17,6 +17,7 @@ var wg sync.WaitGroup
 
 var (
     Count             int
+	Speed             int
 )
 
 func randomString(length int) string {
@@ -82,6 +83,7 @@ func connectTcp(conn *tls.Conn) {
 
 func main() {
 	flag.IntVar(&Count, "c", 1, "Count")
+	flag.IntVar(&Speed, "s", 1, "Speed")
 	flag.Parse()
 
     conf := &tls.Config{
@@ -102,13 +104,17 @@ func main() {
     //status := conn.ConnectionState()
     //fmt.Printf("%#v\n", status)
 
+    interval := time.Duration(1000000/Speed)
     wg.Add(Count)
     start := time.Now()
     for i := 0; i < Count; i++ {
         go connectTcp(conn)
+        time.Sleep(interval * time.Microsecond)
     }
+	sendDur := time.Since(start).Seconds()
     wg.Wait()
     dur := time.Since(start).Seconds()
+	fmt.Println(sendDur, "s")
     fmt.Println(dur, "s")
     fmt.Println(total, "request")
     fmt.Println(float64(total)/dur, "rps")

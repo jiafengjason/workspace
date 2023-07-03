@@ -1,0 +1,82 @@
+/*
+ * @Author:  liff liff@enlink.cn
+ * @Date: 2023-04-20 15:40:47
+ * @LastEditors: liff liff@enlink.cn
+ * @LastEditTime: 2023-04-21 11:31:01
+ * @FilePath: \ensbrain-web-admin\src\i18n\lang\modules\messageCenter\message_zh.js
+ * @Description: 
+ * 
+ * Copyright (c) 2017-2023 . Jiangsu Enlink Network Technology Co.,Ltd., All Rights Reserved. 
+ */
+export const messageMng_zh = {
+  base :{
+    searchBtn: '搜索',
+    resetBtn: '重置',
+    retry: '重试',
+    deleteTip: '请选择要删除的数据！',
+    retryTip: '请选择要重试的数据！',
+    deleteSuccess: '删除成功！',
+    retrySuccess: '消息已重新推送,请稍后查看推送结果。',
+    inputContent: '请输入内容',
+    editTempSuccess: '编辑模板成功！',
+    addTempSuccess: '新增模板成功！',
+  },
+  messageNotice: {
+    title: '消息通知',  
+    serviceModule: '业务模块',
+    msgTitle: '消息标题',
+    tempName: '模板名称',
+    pushMethod: '推送通道',
+    pushState: '推送状态',
+    pushSuccess: '推送成功',
+    pushFailed: '推送失败',
+    pushing: '推送中',
+    contactInfo: '接收人',
+    contactInfoTip: '请输入手机号或邮箱',
+    pushDeniedTip: '推送成功的消息不可重试！',
+    msgContent: '消息内容',
+    systemInfo: '系统消息',
+    clientPush: '客户端推送',
+    email: '邮箱',
+    sms: '短信',
+    weChatOfficialAccount: '微信公众号',
+    nailingRobot: '钉钉机器人',
+    flyingBookRobot: '飞书机器人',
+    enterpriseWechatRobot: '企业微信机器人',
+    pushTime: '推送时间',
+    deleteMsg: '删除消息',
+    deleteMsgContent: '确定删除选中的消息？',
+    retryMessage: '重试消息',
+    retryMessageContent: '确定重试选中的消息？',
+    msgDetail: '消息详情',
+    baseInfo: '基本信息',
+    detailInfo: '详细信息',
+    msgTemplate: '消息模板',
+    failReason: '失败原因',
+    retryNum: '重试次数',
+    emailPush: '邮箱推送',
+    smsPush: '短信推送',
+  },
+  messageTemplate: {
+    title: '消息模板',
+    tempCode: '模板编号',
+    tempType: '模板类型',
+    internal: '内置',
+    custom: '自定义',
+    version: '版本号',
+    description: '描述',
+    msgTempDetail: '消息模板详情',
+    msgContentTemp: '消息内容模板',
+    templateTitle: '标题',
+    mobileTemplateNo: '编号',
+    templateContent: '内容',
+    deleteMsg: '删除消息',
+    deleteMsgTip: '确定删除选中的消息模板？',
+    addContentTempTip: '请添加消息内容模板',
+    addTemp: '新增消息模板',
+    editTemp: '编辑消息模板',
+    paramsClickTip: '您可以点击“上方功能变量按钮”对模版内容进行添加变量内容操作。',
+    addContentTemp: '添加消息内容模板',
+    editContentTemp: '编辑消息内容模板',
+  },
+}

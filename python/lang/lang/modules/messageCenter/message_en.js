@@ -1,0 +1,82 @@
+/*
+ * @Author:  liff liff@enlink.cn
+ * @Date: 2023-04-20 15:40:47
+ * @LastEditors: liff liff@enlink.cn
+ * @LastEditTime: 2023-07-03 11:44:56
+ * @FilePath: \ensbrain-web-admin\src\i18n\lang\modules\messageCenter\message_en.js
+ * @Description: 
+ * 
+ * Copyright (c) 2017-2023 . Jiangsu Enlink Network Technology Co.,Ltd., All Rights Reserved. 
+ */
+export const messageMng_en = {
+  base :{
+    searchBtn: 'Search',
+    resetBtn: 'Reset',
+    retry: 'Retry',
+    deleteTip: 'Please select the data you want to delete!',
+    retryTip: 'Please select the data to retry!',
+    deleteSuccess: 'Delete successfully',
+    retrySuccess: 'The message has been pushed again. Please check the result later.',
+    inputContent: 'Please enter the content',
+    editTempSuccess: 'Edit template successfully!',
+    addTempSuccess: 'New template successfully!',
+  },
+  messageNotice: {
+    title: 'Message Notification',  
+    serviceModule: 'Business Module',
+    msgTitle: 'Message Title',
+    tempName: 'Template Name',
+    pushMethod: 'Notification Channel',
+    pushState: 'Push Status',
+    pushSuccess: 'Push Successful',
+    pushFailed: 'Push Failed',
+    pushing: 'Pushing',
+    contactInfo: 'Recipients',
+    contactInfoTip: 'Phone number or email',
+    pushDeniedTip: 'Pushed messages cannot be retried!',
+    msgContent: 'Message Content',
+    systemInfo: 'System Message',
+    clientPush: 'Client Push',
+    email: 'Mailbox',
+    sms: 'SMS',
+    weChatOfficialAccount: 'WeChat Official Account',
+    nailingRobot: 'DingTalk Robot',
+    flyingBookRobot: 'Lark Robot',
+    enterpriseWechatRobot: 'Enterprise wechat robot',
+    pushTime: 'Push Time',
+    deleteMsg: 'Delete Message',
+    deleteMsgContent: 'Are you sure you want to delete the selected messages?',
+    retryMessage: 'Retry Message',
+    retryMessageContent: 'Are you sure you want to retry the selected messages?',
+    msgDetail: 'Message Details',
+    baseInfo: 'Basic Information',
+    detailInfo: 'Detailed Information',
+    msgTemplate: 'Message Template',
+    failReason: 'Failure Reason',
+    retryNum: 'Retry Count',
+    emailPush: 'Email push',
+    smsPush: 'SMS push',
+  },
+  messageTemplate: {
+    title: 'Message Templates',
+    tempCode: 'Template ID',
+    tempType: 'Template Type',
+    internal: 'Built-in',
+    custom: 'Custom',
+    version: 'Version',
+    description: 'Description',
+    msgTempDetail: 'Message Template Details',
+    msgContentTemp: 'Message Content Template',
+    templateTitle: 'Title',
+    mobileTemplateNo: 'Number',
+    templateContent: 'Content',
+    deleteMsg: 'Delete Message',
+    deleteMsgTip: 'Are you sure you want to delete the selected message templates?',
+    addContentTempTip: 'Please Add Message Content Template',
+    addTemp: 'Add Message Template',
+    editTemp: 'Edit Message Template',
+    paramsClickTip: 'You can click the "Upper Function variable button" to add variable content to the template.',
+    addContentTemp: 'Add Message Content Template',
+    editContentTemp: 'Edit a message content template',
+  },
+}
