@@ -6,6 +6,8 @@
 #     https://docs.scrapy.org/en/latest/topics/settings.html
 #     https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
 #     https://docs.scrapy.org/en/latest/topics/spider-middleware.html
+import os
+import sys
 
 BOT_NAME = "cnblogs"
 
@@ -62,9 +64,12 @@ ROBOTSTXT_OBEY = True
 
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
-#ITEM_PIPELINES = {
-#    "cnblogs.pipelines.CnblogsPipeline": 300,
-#}
+ITEM_PIPELINES = {
+    "scrapy.pipelines.images.ImagesPipeline": 1,
+    "cnblogs.pipelines.ImagePipeline": 2,
+    "cnblogs.pipelines.JsonPipeline": 3,
+    "cnblogs.pipelines.CnblogsPipeline": 300,
+}
 
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See https://docs.scrapy.org/en/latest/topics/autothrottle.html
@@ -91,3 +96,7 @@ ROBOTSTXT_OBEY = True
 REQUEST_FINGERPRINTER_IMPLEMENTATION = "2.7"
 TWISTED_REACTOR = "twisted.internet.asyncioreactor.AsyncioSelectorReactor"
 FEED_EXPORT_ENCODING = "utf-8"
+
+IMAGES_URLS_FIELD = "image_url"
+project_dir = os.path.dirname(os.path.abspath(__file__))
+IMAGES_STORE = os.path.join(project_dir, "images")
