@@ -1,5 +1,6 @@
-import pandas as pd
+import configparser
 import os
+import pandas as pd
 
 def jsonfy(s:str)->object:
     #此函数将不带双引号的json的key标准化
@@ -45,6 +46,30 @@ def js2dict(js_path):
                     dic[key] = value
     return dic
 
+def ini2dict(path):
+    dic = {}
+    '''
+    config = configparser.ConfigParser()
+    config.read(js_path)
+    for section in config.sections():
+        dic[section] = {}
+        for option in config.options(section):
+            dic[section][option] = config.get(section, option)
+    '''
+    with open(path, 'r') as f:
+        content = f.read()
+        for line in content.splitlines():
+            line = line.strip()
+            if line.startswith("["):
+                section = line.strip("[").strip("]")
+            if "=" in line:
+                items = line.split("=")
+                key = items[0].strip()
+                value = items[1].strip()
+                dic[section+"."+key] = value
+
+    return dic
+
 '''
 def gen_sheet(module, js_path, js_name, excel, writer):
     lang = js_name.split(".")[0].split("_")[1]
@@ -70,10 +95,15 @@ def gen_sheet(module, js_path, js_name, excel, writer):
 '''
 
 def gen_sheet(js_path, js_name):
-    lang = js_name.split(".")[0]
+    items = js_name.split(".")
+    lang = items[0]
+    ext = items[1]
     if "_" in lang:
         lang = lang.split("_")[1]
-    dic = js2dict(js_path)
+    if ext=="js":
+        dic = js2dict(js_path)
+    elif ext=="ini":
+        dic = ini2dict(js_path)
     df = pd.DataFrame(list(dic.items()), columns=['key', lang])
     #df.set_index('key', inplace=True)
     #print(df)
@@ -115,16 +145,26 @@ def parseDic(dic):
                 temp = temp[key]
     return newDic
 
-def gen_content(f, dic, indent):
+def gen_js_content(f, dic, indent):
     for key,value in dic.items():
         if isinstance(value,dict):
             line = "%s%s: {\n" % (indent*" ", key)
             f.write(line)
-            gen_content(f, value, indent+4)
+            gen_js_content(f, value, indent+4)
             line = "%s},\n" % (indent*" ")
             f.write(line)
         else:
             line = "%s%s: \'%s\',\n" % (indent*" ", key, value)
+            f.write(line)
+
+def gen_ini_content(f, dic):
+    for key,value in dic.items():
+        if isinstance(value,dict):
+            line = "[%s]\n" % (key)
+            f.write(line)
+            gen_ini_content(f, value)
+        else:
+            line = "%s=%s\n" % (key, value)
             f.write(line)
 
 def gen_js(excel, fmt):
@@ -151,12 +191,34 @@ def gen_js(excel, fmt):
                     f.write("module.exports = {\n")
                 elif fmt == "server":
                     f.write("export const %s_%s = {\n" % (sheet_name, column_name))
-                gen_content(f, dic, 4)
+                gen_js_content(f, dic, 4)
                 f.write("}\n")
                 #json.dump(records, f, indent=4, ensure_ascii=False)
 
+def gen_ini(excel):
+    # 读取 Excel 文件
+    excel_data = pd.read_excel(excel, sheet_name=None)
+
+    root = excel.split(".")[0]+"_ini"
+    for sheet_name, df in excel_data.items():
+        print('Sheet:', sheet_name)
+        module = os.path.join(root, sheet_name)
+        if not os.path.exists(module):
+            os.makedirs(module)
+        df.set_index('key', inplace=True)
+        for column_name in df.columns:
+            # 将 DataFrame 转化为字典对象
+            records = df[column_name].fillna('').to_dict()
+            #print(records)
+            dic = parseDic(records)
+            iniFile = os.path.join(module, column_name+".ini")
+            with open(iniFile, "w", encoding="utf-8") as f:
+                gen_ini_content(f, dic)
+
 if __name__ == '__main__':
     #gen_excel("lang/modules", 'lang.xlsx')
-    gen_js("lang.xlsx", "server")
+    #gen_js("lang.xlsx", "server")
     #gen_excel("ues", 'ues.xlsx')
     #gen_js('ues.xlsx', "client")
+    #gen_excel("uebm", 'uebm.xlsx')
+    gen_ini('uebm.xlsx')
