@@ -199,7 +199,7 @@ def gen_ini(excel):
     # 读取 Excel 文件
     excel_data = pd.read_excel(excel, sheet_name=None)
 
-    root = excel.split(".")[0]+"_ini"
+    root = excel.split(".")[0]+"_i18n"
     for sheet_name, df in excel_data.items():
         print('Sheet:', sheet_name)
         module = os.path.join(root, sheet_name)
