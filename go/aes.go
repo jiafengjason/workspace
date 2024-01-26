@@ -10,7 +10,7 @@ import (
 func main() {
 	key := []byte("CASB2021EnLink!!")
 	iv := []byte("CASB2021EnLink!!")
-	plaintext := []byte("192.168.108.16:8017")
+	plaintext := []byte("192.168.108.17:8015")
 
 	// 加密
 	ciphertext, err := encrypt(plaintext, key, iv)
