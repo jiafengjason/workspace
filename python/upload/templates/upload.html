@@ -1,0 +1,61 @@
+<!DOCTYPE html>  
+<html lang="en">  
+<head>  
+    <meta charset="UTF-8">  
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+    <title>File Upload with Speed Display</title>  
+</head>  
+<body>  
+    <h1>Upload File</h1>  
+    <input type="file" id="fileInput">  
+    <br><br>
+    <button onclick="uploadFile()">Upload</button>  
+    <div id="uploadStatus"></div>  
+  
+    <script>  
+        async function uploadFile() {  
+            const fileInput = document.getElementById('fileInput');  
+            const file = fileInput.files[0];  
+            if (!file) {  
+                alert('Please select a file first.');  
+                return;  
+            }  
+  
+            const formData = new FormData();  
+            formData.append('file', file);  
+  
+            const xhr = new XMLHttpRequest();  
+            xhr.open('POST', '/upload/', true);  
+  
+            let startTime = Date.now();
+            let totalBytesSent = 0;
+  
+            xhr.upload.onprogress = function(e) {  
+                if (e.lengthComputable) {  
+                    const now = Date.now();  
+                    const duration = now - startTime;  
+                    const bytesSent = e.loaded;  
+                    const speed = (bytesSent - totalBytesSent) / duration * 1000; // bytes/sec  
+                    const speedInKbps = speed / 1024; // kbps  
+                    const roundedSpeed = speedInKbps.toFixed(2);
+                    const total = (e.total / 1024).toFixed(2);
+                    document.getElementById('uploadStatus').textContent = `Upload speed: ${roundedSpeed} kbps, Total:${total}k`;
+  
+                    startTime = Date.now();
+                    totalBytesSent = bytesSent;
+                }  
+            };  
+  
+            xhr.onload = function() {  
+                if (xhr.status === 200) {  
+                    document.getElementById('uploadStatus').textContent = 'Upload successful!';  
+                } else {  
+                    document.getElementById('uploadStatus').textContent = 'Upload failed.';  
+                }  
+            };  
+  
+            xhr.send(formData);  
+        }  
+    </script>  
+</body>  
+</html>
