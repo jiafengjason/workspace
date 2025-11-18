@@ -1,0 +1,27 @@
+################################################################################
+# 
+# Copyright(c) SWXA Corp. All rights reserved.
+# 
+# Makefile for swxa swsds test
+# by yaahao, 2009.7.1
+################################################################################
+
+CC=gcc
+CFLAGS=-Wall -D_LOG_TRACE_ -fPIC -I.
+
+LIBS = -L . -lswsds -lpthread
+OBJS=./Decrypt.o
+APPS=Decrypt
+
+all:$(APPS)
+
+%.o:%.c
+	$(CC) -O2 -c $(CFLAGS)  $< -o $@
+
+$(APPS):$(OBJS)
+	$(CC) -O2 -fPIC -Wl,--hash-style=sysv -o $(APPS) $(OBJS) $(LIBS) 
+clean:
+	rm  -f *.o
+
+cleanall:
+	rm  -f *.o $(APPS)
