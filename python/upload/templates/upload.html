@@ -5,13 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">  
     <title>File Upload with Speed Display</title>  
 </head>  
-<body>  
-    <h1>Upload File</h1>  
-    <input type="file" id="fileInput">  
-    <br><br>
-    <button onclick="uploadFile()">Upload</button>  
-    <div id="uploadStatus"></div>  
-  
+<body>
+    <form id="myForm">
+        <h1>点击以下链接跳转到其他网站</h1>
+        <a href="http://wd.enlink.top" target="_blank">访问示例网站</a>
+        <br><br>
+        <h1>Upload File</h1>  
+        <input type="file" id="fileInput">  
+        <br><br>
+        <button onclick="uploadFile()">Upload</button>
+        <br><br>
+        <button type="button" onclick="sendPutRequest()">Submit</button>
+        <div id="uploadStatus"></div>
+    </form>
+    
     <script>  
         async function uploadFile() {  
             const fileInput = document.getElementById('fileInput');  
@@ -55,7 +62,32 @@
             };  
   
             xhr.send(formData);  
-        }  
-    </script>  
-</body>  
+        }
+        
+        function sendPutRequest() {
+            const form = document.getElementById('myForm');
+            const formData = new FormData(form);
+            const url = 'http://wd.enlink.top'; // 替换为你的URL
+ 
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', url, true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.setRequestHeader('Access-Control-Request-Headers', 'accept');
+
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    console.log('Success:', xhr.responseText);
+                } else if (xhr.readyState === 4) {
+                    console.error('Error:', xhr.statusText);
+                }
+            };
+ 
+            // 注意：由于FormData对象不能直接作为XMLHttpRequest的body，
+            // 这里我们将其转换为URL编码的字符串（仅作为示例，不推荐用于实际生产环境）。
+            // 实际使用中，你可能需要手动构建这个字符串或使用其他库。
+            const formDataStr = new URLSearchParams(formData).toString();
+            xhr.send(formDataStr);
+        }
+    </script>
+</body>
 </html>
