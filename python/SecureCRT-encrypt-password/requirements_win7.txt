@@ -1,0 +1,22 @@
+# Win7/Win8/Win10/Win11 compatible dependencies
+# Recommended Python: 3.8.x 64-bit, prefer 3.8.10 on Win7
+# pip/setuptools/wheel should be upgraded separately, not in this file
+
+# Core cryptography library (provides AES, Blowfish, SHA256, SHA512, KDF)
+# 3.20.0 is the last version with prebuilt wheels for Python 3.8
+pycryptodome==3.20.0
+
+# PyInstaller packaging (4.10 is the last major version with good Win7 support)
+pyinstaller==4.10
+pyinstaller-hooks-contrib==2022.1
+altgraph==0.17.4
+pefile==2023.2.7
+pywin32-ctypes==0.2.3
+
+# Compatibility / utility
+six==1.17.0
+future==1.0.0
+packaging==25.0
+zipp==3.20.2
+importlib_metadata==8.5.0
+typing_extensions==4.13.2

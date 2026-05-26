@@ -1,0 +1,4 @@
+# SecureCRT 密码解密工具的运行时依赖
+# pycryptodome 提供 Crypto.Cipher (AES/Blowfish)、Crypto.Hash (SHA256/SHA512)、
+# Crypto.Protocol.KDF (含内部 _bcrypt_hash) 等本工具所需的全部加解密原语。
+pycryptodome>=3.18,<4
