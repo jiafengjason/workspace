@@ -1,25 +1,17 @@
-import requests
+from openai import OpenAI
 
-# API Key 和请求 URL
-api_key = 'sk-4b5f2a482b424108b8e62efec9a68fa0'
-url = 'https://api.deepseek.com/search'
+client = OpenAI(
+    api_key="sk-4b5f2a482b424108b8e62efec9a68fa0",
+    base_url="https://api.deepseek.com/v1"
+)
 
-# 设置请求头和参数
-headers = {
-    'Authorization': f'Bearer {api_key}'
-}
-params = {
-    'query': 'your_search_keyword'
-}
-
-# 发起请求
-response = requests.get(url, headers=headers, params=params)
-
-# 检查响应状态码和内容
-if response.status_code == 200:
-    print('API Key 有效')
-    data = response.json()
-    # 处理响应数据...
-else:
-    print(f'API Key 可能无效，响应状态码：{response.status_code}')
-    print(response.text)
+try:
+    completion = client.chat.completions.create(
+        model="deepseek-chat",  # 免费模型
+        messages=[{"role": "user", "content": "hello"}]
+    )
+    print("✅ DeepSeek 连通成功！")
+    print(completion.choices[0].message.content)
+except Exception as e:
+    print("❌ 失败")
+    print(e)
