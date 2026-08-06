@@ -11,7 +11,7 @@ def udp_server(host='::', port=12345):
     
     while True:
         data, addr = sock.recvfrom(1024)
-        print "from %s get: %s" % (addr, data)
+        print("from %s get: %s" % (addr, data))
         
         response = "get: %s" % data
         sock.sendto(response, addr)

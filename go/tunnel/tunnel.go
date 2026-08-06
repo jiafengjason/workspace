@@ -4,28 +4,22 @@ import (
 	"bytes"
 	"crypto/tls"
 	"encoding/binary"
-	//"encoding/json"
-	//"encoding/xml"
 	enerr "errors"
 	"fmt"
-	//"github.com/snail007/goproxy/utils"
 	"io"
 	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
 	"os"
+	"os/signal"
 	"strconv"
 	"strings"
-    //"math/rand"
 	"time"
-        "flag"
-        "crypto/md5"
-    //"encoding/hex"
-    //"net/http/cookiejar"
+	"flag"
+	"crypto/md5"
 	"math/rand"
-    //"bufio"
-	//"path/filepath"
+	"syscall"
 )
 
 func md5V2(str string) string {
@@ -33,6 +27,18 @@ func md5V2(str string) string {
     has := md5.Sum(data)
     md5str := fmt.Sprintf("%x", has)
     return md5str
+}
+
+type TCP struct {
+	SrcPort    uint16
+	DstPort    uint16
+	SeqNum     uint32
+	AckNum     uint32
+	DataOffset uint8  // 4 bits: data offset, 4 bits: reserved
+	Flags      uint8
+	Window     uint16
+	Checksum   uint16
+	Urgent     uint16
 }
 
 type UDP struct {
@@ -224,7 +230,18 @@ var (
 	DnsIPv6 = net.IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
     GatewayHost string
     Port int
+	Protocol string
+	DstIP   string
+	DstPort int
+	PPS	int
 )
+
+const (
+	PROTO_TCP  = "tcp"
+	PROTO_UDP  = "udp"
+	PROTO_ICMP = "icmp"
+)
+
 //var curCookies []*http.Cookie = nil;
 //var gCurCookies []*http.Cookie = nil;
 //var gCurCookieJar *cookiejar.Jar;
@@ -411,6 +428,21 @@ func HeartKeepAlive(conn *tls.Conn) {
 		}
 	}
 }
+
+func tcpCheckSum(srcIP, dstIP net.IP, data []byte) uint16 {
+	// 构造伪头部
+	pseudoHeader := make([]byte, 12)
+	copy(pseudoHeader[0:4], srcIP.To4())
+	copy(pseudoHeader[4:8], dstIP.To4())
+	pseudoHeader[8] = 0
+	pseudoHeader[9] = 6 // Protocol: TCP
+	binary.BigEndian.PutUint16(pseudoHeader[10:12], uint16(len(data)))
+
+	// 合并伪头部和数据
+	combined := append(pseudoHeader, data...)
+	return CheckSum(combined)
+}
+
 func CheckSum(data []byte) uint16 {
 	var (
 		sum    uint32
@@ -441,12 +473,60 @@ func GetRandomString(l int) string {
 	return string(result)
 }
 
+func makeTcpPacket(addr net.IP) []byte {
+	var tcp TCP
+
+	tmp := []byte(addr)
+	tcp.SrcPort = (uint16(tmp[14])<<8 + uint16(tmp[15])) + uint16(20000)
+	tcp.DstPort = uint16(DstPort)
+	tcp.SeqNum = uint32(rand.Intn(4294967295))
+	tcp.AckNum = 0
+	tcp.DataOffset = 0x50 // 5 words (20 bytes header)
+	tcp.Flags = 0x02      // SYN flag
+	tcp.Window = 65535
+	tcp.Checksum = 0
+	tcp.Urgent = 0
+
+	var buffer bytes.Buffer
+	binary.Write(&buffer, binary.BigEndian, tcp)
+
+	dstIP := net.ParseIP(DstIP)
+	if dstIP == nil {
+		log.Printf("[WARN] Invalid UDP destination IP: %s, using default 192.168.112.142", DstIP)
+		dstIP = net.IPv4(192, 168, 112, 142)
+	}
+	tcp.Checksum = tcpCheckSum(addr, dstIP, buffer.Bytes())
+
+	buffer.Reset()
+	binary.Write(&buffer, binary.BigEndian, tcp)
+
+	// 构造 IP 头
+	iph := &Header{
+		Version:  Version,
+		Len:      HeaderLen,
+		TOS:      0xc0,
+		TotalLen: HeaderLen + len(buffer.Bytes()),
+		TTL:      100,
+		Protocol: 6,
+		Src:      addr,
+		Dst:      dstIP,
+	}
+
+	b := iph.Marshal()
+	iph.Checksum = int(CheckSum(b))
+	c := iph.Marshal()
+
+	data := bytes.NewBuffer(c)
+	data.Write(buffer.Bytes())
+	return data.Bytes()
+}
+
 func makeUdpPacket(addr net.IP) []byte {
 	var udp UDP
 
 	tmp := []byte(addr)
 	udp.Sport = (uint16(tmp[14])<<8 + uint16(tmp[15])) + uint16(20000)
-	udp.Dport = 30000
+	udp.Dport = uint16(DstPort)
 
 	var buffer bytes.Buffer
 
@@ -462,6 +542,12 @@ func makeUdpPacket(addr net.IP) []byte {
 	buffer.Reset()
 	binary.Write(&buffer, binary.BigEndian, udp)
 	binary.Write(&buffer, binary.BigEndian, s)
+
+	dstIP := net.ParseIP(DstIP)
+	if dstIP == nil {
+		log.Printf("[WARN] Invalid UDP destination IP: %s, using default 192.168.112.142", DstIP)
+		dstIP = net.IPv4(192, 168, 112, 142)
+	}
 	iph := &Header{
 		Version:  Version,
 		Len:      HeaderLen,
@@ -471,7 +557,7 @@ func makeUdpPacket(addr net.IP) []byte {
 		Protocol: 17,
 		//Src:      net.IPv4(1, 1, 0, 2),
 		Src:      addr,
-		Dst:      net.IPv4(192, 168, 100, 180),
+		Dst:      dstIP,
 	}
 
 	b := iph.Marshal()
@@ -549,7 +635,6 @@ func makeIcmpPacket(addr net.IP) ([]byte){
 		TotalLen: HeaderLen + len(buffer.Bytes()),
 		TTL:      100,
 		Protocol: 1,
-		//Src:      net.IPv4(1, 1, 0, 2),
 		Src:      addr,
 		Dst:      net.IPv4(192, 168, 100, 114),
 	}
@@ -566,8 +651,16 @@ func makeIcmpPacket(addr net.IP) ([]byte){
 }
 
 func tunnelPingTest(conn *tls.Conn, addr net.IP) {
-    for true {
-		time.Sleep(2000 * time.Millisecond)
+	interval := time.Duration(1000000/PPS) * time.Microsecond
+	if interval < time.Microsecond {
+		interval = time.Microsecond
+	}
+	//log.Printf("[Ping] Rate mode: %d pps, interval: %v", PPS, interval)
+
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for range ticker.C {
         //	ProtoNone   uint32 = 0x00000000 // 协议标识: 未知;
         //	ProtoIPv4   uint32 = 0x00000001 // 协议标识: IPv4;
         //	ProtoIPv6   uint32 = 0x00000002 // 协议标识: IPv6;
@@ -583,16 +676,24 @@ func tunnelPingTest(conn *tls.Conn, addr net.IP) {
                             0x64, 0xea, 0x08, 0x00, 0x96, 0x86, 0x00, 0x01,
                             0x00, 0x16, 0x61, 0x62};
         */
-
-        //PAYLOAD := makeIcmpPacket(addr)
-        PAYLOAD := makeUdpPacket(addr)
-        //PAYLOAD := makeV6UdpPacket(addr)
+		var payload []byte
+		switch Protocol {
+		case PROTO_TCP:
+			payload = makeTcpPacket(addr)
+		case PROTO_UDP:
+			payload = makeUdpPacket(addr)
+		case PROTO_ICMP:
+			payload = makeIcmpPacket(addr)
+		default:
+			payload = makeUdpPacket(addr)
+		}
+		
         p := bytes.NewBuffer(ELK_VERSION)
         p.Write(ELK_PROTO)
         p.Write(ELK_PACKAGE_LEN)
         p.Write(ELK_PACKAGE_XID)
         p.Write(ELK_PACKAGE_APPID)
-        p.Write(PAYLOAD)
+        p.Write(payload)
         data := p.Bytes()
         byteLen := []byte{0x00, 0x00}
         binary.BigEndian.PutUint16(byteLen, uint16(len(data)))
@@ -685,7 +786,8 @@ func httpPost(user string, pass string, i int) (map[string]interface{}, error) {
 			data, err := readFull(conn, uint64(size)-12)
 			if nil != err {
 				log.Println("[server] Failed to  Read auth data error:", err)
-                return nil, err
+                //return nil, err
+                os.Exit(1)
 			}
 			//log.Println("[server] Get Server auth data :", data)
 			if len(data) < 28 {
@@ -808,39 +910,63 @@ func httpPostLogout(gCurCookies []*http.Cookie) {
 }
 
 func main() {
+	var index int
     var tunnel_n int
     var speed_n int
     //var pool_n int = 1
+	flag.IntVar(&index, "index", 0, "session start index")
     flag.IntVar(&tunnel_n, "tunnel_n", 0, "threads")
     //flag.IntVar(&pool_n, "pool_n", 1, "vippool count")
     flag.IntVar(&speed_n, "speed_n", 1, "speed")
     flag.IntVar(&Port, "port", 443, "gateway serve port")
     flag.StringVar(&GatewayHost, "gatewayhost", "", "gateway ip")
+	flag.StringVar(&Protocol, "proto", "udp", "Protocol to use: tcp, udp, icmp (default: udp)")
+    flag.StringVar(&DstIP, "dip", "192.168.112.142", "Destination IP address")
+    flag.IntVar(&DstPort, "dport", 30000, "Destination port")
+	flag.IntVar(&PPS, "pps", 1, "Packets per second")
 
     flag.Parse()
-    fmt.Println("Port=", strconv.Itoa(Port))
+
+	Protocol = strings.ToLower(Protocol)
+	if Protocol != PROTO_TCP && Protocol != PROTO_UDP && Protocol != PROTO_ICMP {
+		log.Printf("[WARN] Invalid protocol: %s, using default 'udp'", Protocol)
+		Protocol = PROTO_UDP
+	}
 
     if len(GatewayHost) <= 0 {
         fmt.Println("GatewayHost is nil")
         os.Exit(0)
     }
+	var rLimit syscall.Rlimit
+	err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLimit)
+	if err == nil {
+		log.Printf("[INFO] Old - Soft: %d, Hard: %d", rLimit.Cur, rLimit.Max)
+		rLimit.Cur = 65535
+		rLimit.Max = 65535
+		err = syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rLimit)
+		if err != nil {
+			log.Printf("[ERROR] Setrlimit Failed: %v", err)
+		}
+		log.Printf("[INFO] New - Soft: %d, Hard: %d", rLimit.Cur, rLimit.Max)
+	}
 
-    var i int
-    i = 0
     interval := time.Duration(1000000/speed_n)
 
-    cleanupDone := make(chan bool)
-
     for cc:= 0; cc < tunnel_n; cc++ {
-        str := "test" + strconv.Itoa(i)
+        str := "test" + strconv.Itoa(index)
         //md5Str := "pool-" + strconv.Itoa(i%pool_n + 1) + "-" + md5V2(str)
         md5Str := md5V2(str)
-        i = i + 1
+		index = index + 1
         fmt.Println("pass ", md5Str, "", str)
-        go httpPost(str,md5Str,i)
+        go httpPost(str,md5Str,index)
 
         time.Sleep(interval * time.Microsecond)
     }
 
-    <-cleanupDone
+	log.Println("[INFO] All tunnels started, press Ctrl+C to exit")
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	<-sigChan
+
+	log.Println("[INFO] Received exit signal, shutting down...")
 }
